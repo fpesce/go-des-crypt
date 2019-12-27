@@ -1,6 +1,9 @@
 package des_crypt
 
-import "testing"
+import (
+	"testing"
+	"unsafe"
+)
 
 func TestDESCrypt(t *testing.T) {
 	var desCryptTests = []struct {
@@ -19,10 +22,46 @@ func TestDESCrypt(t *testing.T) {
 			t.Errorf("expected %s was not found in %s", tt.expected, actual)
 		}
 	}
+	for _, tt := range desCryptTests {
+		output := make([]byte, 13)
+		saltbits := DESCryptGetSaltBits(tt.salt)
+		r0, r1 := DESCryptRaw(tt.password, saltbits)
+		output[0] = tt.salt[0]
+		output[1] = tt.salt[1]
+		l := (r0 >> 8)
+		output[2] = ascii64Bytes[(l>>18)&0x3f]
+		output[3] = ascii64Bytes[(l>>12)&0x3f]
+		output[4] = ascii64Bytes[(l>>6)&0x3f]
+		output[5] = ascii64Bytes[l&0x3f]
+
+		l = (r0 << 16) | ((r1 >> 16) & 0xffff)
+		output[6] = ascii64Bytes[(l>>18)&0x3f]
+		output[7] = ascii64Bytes[(l>>12)&0x3f]
+		output[8] = ascii64Bytes[(l>>6)&0x3f]
+		output[9] = ascii64Bytes[l&0x3f]
+
+		l = r1 << 2
+		output[10] = ascii64Bytes[(l>>12)&0x3f]
+		output[11] = ascii64Bytes[(l>>6)&0x3f]
+		output[12] = ascii64Bytes[l&0x3f]
+
+		actual := *(*string)(unsafe.Pointer(&output))
+
+		if actual != tt.expected {
+			t.Errorf("expected DESCryptRaw %s was not found in %s", tt.expected, actual)
+		}
+	}
 }
 
 func BenchmarkDESCrypt(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		DESCrypt([8]byte{'Z', 'Z', 'Z', 'Z', 'Z', 'Z', 'Z', 'Z'}, [2]byte{'Z', 'Z'})
+	}
+}
+
+func BenchmarkDESCryptRaw(b *testing.B) {
+	saltbits := DESCryptGetSaltBits([2]byte{'Z', 'Z'})
+	for i := 0; i < b.N; i++ {
+		DESCryptRaw([8]byte{'Z', 'Z', 'Z', 'Z', 'Z', 'Z', 'Z', 'Z'}, saltbits)
 	}
 }
