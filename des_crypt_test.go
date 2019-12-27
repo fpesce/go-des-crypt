@@ -20,3 +20,9 @@ func TestDESCrypt(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkDESCrypt(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		DESCrypt([8]byte{'Z', 'Z', 'Z', 'Z', 'Z', 'Z', 'Z', 'Z'}, [2]byte{'Z', 'Z'})
+	}
+}
