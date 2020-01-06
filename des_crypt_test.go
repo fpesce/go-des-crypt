@@ -40,33 +40,21 @@ func TestDESCrypt(t *testing.T) {
 			t.Errorf("expected %s was not found in %s", tt.expected, actual)
 		}
 	}
+	var output [14]byte
 	for _, tt := range desCryptTests {
-		output := make([]byte, 13)
 		saltbits := DESCryptGetSaltBits(tt.salt)
 		r0, r1 := DESCryptRaw(tt.password, saltbits)
-		output[0] = tt.salt[0]
-		output[1] = tt.salt[1]
-		l := (r0 >> 8)
-		output[2] = ascii64Bytes[(l>>18)&0x3f]
-		output[3] = ascii64Bytes[(l>>12)&0x3f]
-		output[4] = ascii64Bytes[(l>>6)&0x3f]
-		output[5] = ascii64Bytes[l&0x3f]
 
-		l = (r0 << 16) | ((r1 >> 16) & 0xffff)
-		output[6] = ascii64Bytes[(l>>18)&0x3f]
-		output[7] = ascii64Bytes[(l>>12)&0x3f]
-		output[8] = ascii64Bytes[(l>>6)&0x3f]
-		output[9] = ascii64Bytes[l&0x3f]
-
-		l = r1 << 2
-		output[10] = ascii64Bytes[(l>>12)&0x3f]
-		output[11] = ascii64Bytes[(l>>6)&0x3f]
-		output[12] = ascii64Bytes[l&0x3f]
-
+		DESCryptHashRaw(&output, tt.salt, r0, r1)
 		actual := *(*string)(unsafe.Pointer(&output))
-
-		if actual != tt.expected {
-			t.Errorf("expected DESCryptRaw %s was not found in %s", tt.expected, actual)
+		for i := 0; i < len(tt.expected); i++ {
+			if output[i] != 0 && output[i] != tt.expected[i] {
+				t.Errorf("expected DESCryptRaw %s was not found in %s", tt.expected, actual)
+			}
+		}
+		hashR0, hashR1 := DESCryptHashBytesRaw(string(output[:]))
+		if r0 != hashR0 || r1 != hashR1 {
+			t.Errorf("expected DESCryptHashBytesRaw failed %x,%x instead of %x,%x", hashR0, hashR1, r0, r1)
 		}
 	}
 }

@@ -18,7 +18,9 @@
 
 package des_crypt
 
-import "unsafe"
+import (
+	"strings"
+)
 
 var IP = [64]byte{58, 50, 42, 34, 26, 18, 10, 2, 60, 52, 44, 36, 28, 20, 12, 4, 62, 54, 46, 38, 30, 22, 14, 6, 64, 56, 48, 40, 32, 24, 16, 8, 57, 49, 41, 33, 25, 17, 9, 1, 59, 51, 43, 35, 27, 19, 11, 3, 61, 53, 45, 37, 29, 21, 13, 5, 63, 55, 47, 39, 31, 23, 15, 7}
 
@@ -332,10 +334,36 @@ func DESCryptRaw(key [8]byte, saltbits uint32) (r0, r1 uint32) {
 }
 
 func DESCrypt(key [8]byte, setting [2]byte) string {
-	output := make([]byte, 13)
+	var out strings.Builder
 
 	saltbits := DESCryptGetSaltBits(setting)
 	r0, r1 := DESCryptRaw(key, saltbits)
+	out.WriteByte(setting[0])
+	out.WriteByte(setting[1])
+	/*
+	 * Now encode the result...
+	 */
+	l := (r0 >> 8)
+	out.WriteByte(ascii64Bytes[(l>>18)&0x3f])
+	out.WriteByte(ascii64Bytes[(l>>12)&0x3f])
+	out.WriteByte(ascii64Bytes[(l>>6)&0x3f])
+	out.WriteByte(ascii64Bytes[l&0x3f])
+
+	l = (r0 << 16) | ((r1 >> 16) & 0xffff)
+	out.WriteByte(ascii64Bytes[(l>>18)&0x3f])
+	out.WriteByte(ascii64Bytes[(l>>12)&0x3f])
+	out.WriteByte(ascii64Bytes[(l>>6)&0x3f])
+	out.WriteByte(ascii64Bytes[l&0x3f])
+
+	l = r1 << 2
+	out.WriteByte(ascii64Bytes[(l>>12)&0x3f])
+	out.WriteByte(ascii64Bytes[(l>>6)&0x3f])
+	out.WriteByte(ascii64Bytes[l&0x3f])
+
+	return out.String()
+}
+
+func DESCryptHashRaw(output *[14]byte, setting [2]byte, r0, r1 uint32) {
 	output[0] = setting[0]
 	output[1] = setting[1]
 	/*
@@ -357,6 +385,14 @@ func DESCrypt(key [8]byte, setting [2]byte) string {
 	output[10] = ascii64Bytes[(l>>12)&0x3f]
 	output[11] = ascii64Bytes[(l>>6)&0x3f]
 	output[12] = ascii64Bytes[l&0x3f]
+}
 
-	return *(*string)(unsafe.Pointer(&output))
+func DESCryptHashBytesRaw(hash string) (r0, r1 uint32) {
+	r0_topbits := uint32(ascii_to_bin[hash[5]]) | (uint32(ascii_to_bin[hash[4]]) << 6) | (uint32(ascii_to_bin[hash[3]]) << 12) | (uint32(ascii_to_bin[hash[2]]) << 18)
+	r0_r1_mixed := uint32(ascii_to_bin[hash[9]]) | (uint32(ascii_to_bin[hash[8]]) << 6) | (uint32(ascii_to_bin[hash[7]]) << 12) | (uint32(ascii_to_bin[hash[6]]) << 18)
+	r1_botbits := uint32(ascii_to_bin[hash[12]]) | (uint32(ascii_to_bin[hash[11]]) << 6) | (uint32(ascii_to_bin[hash[10]]) << 12)
+	r0 = (r0_topbits << 8) | ((r0_r1_mixed >> 16) & (0xffff))
+	r1 = (r0_r1_mixed << 16) | ((r1_botbits >> 2) & (0xffff))
+
+	return r0, r1
 }
