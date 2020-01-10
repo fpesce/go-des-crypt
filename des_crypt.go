@@ -50,7 +50,7 @@ var un_pbox [32]byte
 var pbox = [32]byte{16, 7, 20, 21, 29, 12, 28, 17, 1, 15, 23, 26, 5, 18, 31, 10, 2, 8, 24, 14, 32, 27, 3, 9, 19, 13, 30, 6, 22, 11, 4, 25}
 
 func bits32x(i, o int) uint32 {
-	return 1 << (31 - (i + o))
+	return 1 << (31 - (uint32(i) + uint32(o)))
 }
 func bits32(i int) uint32 {
 	return bits32x(i, 0)
@@ -62,7 +62,7 @@ func bits24(i int) uint32 {
 	return bits32x(i, 8)
 }
 func bits8(i int) byte {
-	return 1 << (7 - i)
+	return 1 << (7 - uint32(i))
 }
 
 var init_perm [64]byte
@@ -244,8 +244,8 @@ func desSetKey(key [8]byte) (en_keysl, en_keysr [16]uint32) {
 
 		shifts += int(key_shifts[r])
 
-		t0 = (k0 << shifts) | (k0 >> (28 - shifts))
-		t1 = (k1 << shifts) | (k1 >> (28 - shifts))
+		t0 = (k0 << uint32(shifts)) | (k0 >> (28 - uint32(shifts)))
+		t1 = (k1 << uint32(shifts)) | (k1 >> (28 - uint32(shifts)))
 
 		en_keysl[r] = comp_maskl[0][(t0>>21)&0x7f] | comp_maskl[1][(t0>>14)&0x7f] | comp_maskl[2][(t0>>7)&0x7f] | comp_maskl[3][t0&0x7f] | comp_maskl[4][(t1>>21)&0x7f] | comp_maskl[5][(t1>>14)&0x7f] | comp_maskl[6][(t1>>7)&0x7f] | comp_maskl[7][t1&0x7f]
 		en_keysr[r] = comp_maskr[0][(t0>>21)&0x7f] | comp_maskr[1][(t0>>14)&0x7f] | comp_maskr[2][(t0>>7)&0x7f] | comp_maskr[3][t0&0x7f] | comp_maskr[4][(t1>>21)&0x7f] | comp_maskr[5][(t1>>14)&0x7f] | comp_maskr[6][(t1>>7)&0x7f] | comp_maskr[7][t1&0x7f]
