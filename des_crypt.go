@@ -316,6 +316,10 @@ func setupSalt(salt uint32) uint32 {
 	return saltbits
 }
 
+func DESCryptGetSaltUI(setting [2]byte) uint32 {
+	return uint32(ascii_to_bin[setting[1]])<<6 | uint32(ascii_to_bin[setting[0]])
+}
+
 func DESCryptGetSaltBits(setting [2]byte) uint32 {
 	return setupSalt(uint32(ascii_to_bin[setting[1]])<<6 | uint32(ascii_to_bin[setting[0]]))
 }
